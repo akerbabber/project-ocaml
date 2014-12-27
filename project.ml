@@ -40,13 +40,37 @@ type typ =
   | Gen of generic;;
 
   
-let type_inf expr =
+let rec type_inf expr =
   match expr with
     Eint (n) -> Int
   | Ebool (b) -> Bool
   | Echar (c) -> Char
-  | Cons (a1, a2) -> if type_inf a1 = type_inf a2 then List (type_inf a1)
-		     else failwith "error";;
+  | Cons (a1, a2) when type_inf a1 = type_inf a2 -> List (type_inf a1)
+  | Prod (a, b) when type_inf a = Int
+		     && type_inf b = Int -> Int
+  | Sum (a, b) when type_inf a = Int
+		    && type_inf b = Int -> Int
+  | Diff (a, b) when type_inf a = Int
+		     && type_inf b = Int -> Int
+  | Mod (a, b) when type_inf a = Int
+		    && type_inf b = Int -> Int
+  | Div (a, b) when type_inf a = Int
+		    && type_inf b = Int -> Int
+  | Lessint (a, b) when type_inf a = Int
+		        && type_inf b = Int -> Bool
+  | Eqint (a, b) when type_inf a = Int
+		      && type_inf b = Int -> Bool
+  | Iszero (a) when type_inf a = Int -> Int
+  | Lesschar (a, b) when type_inf a = Char
+	       	         && type_inf b = Char -> Bool
+  | Eqchar (a, b) when type_inf a = Char
+		       && type_inf b = Char -> Bool
+  | And (b1, b2) when type_inf b1 = Bool
+		      && type_inf b2 = Bool -> Bool
+  | Or (b1, b2) when type_inf b1 = Bool
+		     && type_inf b2 = Bool -> Bool
+  | Not (b) when type_inf b = Bool -> Bool
+;;
 
   
 let semprod (a, b) =
@@ -74,6 +98,42 @@ let semdiv (a, b) =
     Eint (a'), Eint (b') when b' != 0 -> Eint (a' / b')
   | Eint (a'), Eint (b') when b' = 0 -> failwith "error";;
 
+let semlessint (a, b) =
+  match a, b with
+    Eint (a'), Eint (b') when a' < b'  -> Ebool (true)
+  | _  -> Ebool (false);;
+
+let semeqint (a, b) =
+  match a, b with
+    Eint (a'), Eint (b') when a' = b'  -> Ebool (true)
+  | _  -> Ebool (false);;
+
+let semiszero a =
+  match a with
+    Eint (0) -> Ebool (true)
+  | _  -> Ebool (false);;
+
+let semlesschar (a, b) =
+  match a, b with
+    Echar(a'), Echar (b') when a' <= b' -> Ebool (true)
+  | _ -> Ebool (false);;
+
+let semeqchar (a, b) =
+  match a, b with
+    Echar(a'), Echar(b') when a' = b' -> Ebool (true)
+  | _ -> Ebool(false);;
+
+let semor (a, b) =
+  match a, b with
+    Ebool(b1), Ebool(b2) -> b1 || b2;;
+
+let semand (a, b) =
+  match a, b with
+    Ebool(b1), Ebool(b2) -> b1 && b2;;
+
+let semnot b =
+  match b with
+    Ebool(b') -> not b';;
   
 let sem expr =
   match expr with
@@ -81,4 +141,9 @@ let sem expr =
   | Sum (a, b) -> semsum (a, b)
   | Diff (a, b) -> semdiff (a, b)
   | Mod (a, b) -> semmod (a, b)
-  | Div (a, b) -> semdiv (a, b);;
+  | Div (a, b) -> semdiv (a, b)
+  | Lessint (a, b) -> semlessint (a, b)
+  | Eqint (a, b) -> semeqint (a, b)
+  | Iszero (a) -> semiszero (a)
+  | Lesschar (a, b) -> semlesschar (a, b)
+  | Eqchar (a, b) -> semeqchar (a, b);;
