@@ -75,8 +75,9 @@ let rec type_inf expr =
   
 let semprod (a, b) =
   match a, b with
-    Eint (a'), Eint (b') -> Eint (a' * b');;
+    Eint (a'), Eint (b') -> Eint ((a') * (b'));;
 
+  
 let semsum (a, b) =
   match a, b with
     Eint (a'), Eint (b') -> Eint (a' + b');;
@@ -115,35 +116,43 @@ let semiszero a =
 
 let semlesschar (a, b) =
   match a, b with
-    Echar(a'), Echar (b') when a' <= b' -> Ebool (true)
-  | _ -> Ebool (false);;
+    Echar(a'), Echar (b') -> Ebool (a' = b');;
 
 let semeqchar (a, b) =
   match a, b with
-    Echar(a'), Echar(b') when a' = b' -> Ebool (true)
-  | _ -> Ebool(false);;
+    Echar(a'), Echar(b') -> Ebool (a' = b');;
 
 let semor (a, b) =
   match a, b with
-    Ebool(b1), Ebool(b2) -> b1 || b2;;
+    Ebool(b1), Ebool(b2) -> Ebool (b1 || b2);;
 
 let semand (a, b) =
   match a, b with
-    Ebool(b1), Ebool(b2) -> b1 && b2;;
+    Ebool(b1), Ebool(b2) -> Ebool (b1 && b2);;
 
 let semnot b =
   match b with
-    Ebool(b') -> not b';;
+    Ebool(b') -> Ebool (not b');;
+
+
   
-let sem expr =
+let rec sem expr =
   match expr with
-    Prod (a, b) -> semprod (a, b)
-  | Sum (a, b) -> semsum (a, b)
-  | Diff (a, b) -> semdiff (a, b)
-  | Mod (a, b) -> semmod (a, b)
-  | Div (a, b) -> semdiv (a, b)
-  | Lessint (a, b) -> semlessint (a, b)
-  | Eqint (a, b) -> semeqint (a, b)
-  | Iszero (a) -> semiszero (a)
-  | Lesschar (a, b) -> semlesschar (a, b)
-  | Eqchar (a, b) -> semeqchar (a, b);;
+    Empty -> Empty
+  | Eint (a) -> Eint (a)
+  | Ebool (b) -> Ebool (b)
+  | Echar (c) -> Echar (c)
+  | Prod (a, b) -> semprod (sem a, sem b)
+  | Sum (a, b) -> semsum (sem a, sem b)
+  | Diff (a, b) -> semdiff (sem a, sem b)
+  | Mod (a, b) -> semmod (sem a, sem b)
+  | Div (a, b) -> semdiv (sem a, sem b)
+  | Lessint (a, b) -> semlessint (sem a, sem b)
+  | Eqint (a, b) -> semeqint (sem a, sem b)
+  | Iszero (a) -> semiszero (sem a)
+  | Lesschar (a, b) -> semlesschar (sem a, sem b)
+  | Eqchar (a, b) -> semeqchar (sem a, sem b)
+  | Or (b1, b2) -> semor (sem b1, sem b2)
+  | And (b1, b2) -> semand(sem b1, sem b2)
+  | Not (b) -> semnot (sem b)
+;;
